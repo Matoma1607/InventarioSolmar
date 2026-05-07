@@ -2,7 +2,7 @@ import { collection, doc, getDocs, setDoc, updateDoc, deleteDoc, query, orderBy,
 import { db } from '../lib/firebase';
 import { Item, Unit, HistoryEntry } from '../types';
 
-export enum OperationType {
+export enum FirestoreOperationType {
   CREATE = 'create',
   UPDATE = 'update',
   DELETE = 'delete',
@@ -13,12 +13,12 @@ export enum OperationType {
 
 interface FirestoreErrorInfo {
   error: string;
-  operationType: OperationType;
+  operationType: FirestoreOperationType;
   path: string | null;
   authInfo: any;
 }
 
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+function handleFirestoreError(error: unknown, operationType: FirestoreOperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
@@ -38,7 +38,7 @@ export const firestoreService = {
       const snap = await getDocs(collection(db, p));
       return snap.docs.map(d => ({ ...d.data(), id: d.id } as unknown as Item));
     } catch (e) {
-      handleFirestoreError(e, OperationType.LIST, p);
+      handleFirestoreError(e, FirestoreOperationType.LIST, p);
       return [];
     }
   },
@@ -56,7 +56,7 @@ export const firestoreService = {
         return docRef.id;
       }
     } catch (e) {
-      handleFirestoreError(e, OperationType.WRITE, p);
+      handleFirestoreError(e, FirestoreOperationType.WRITE, p);
       return '';
     }
   },
@@ -67,7 +67,7 @@ export const firestoreService = {
       const snap = await getDocs(collection(db, p));
       return snap.docs.map(d => ({ ...d.data(), id: d.id } as unknown as Unit));
     } catch (e) {
-      handleFirestoreError(e, OperationType.LIST, p);
+      handleFirestoreError(e, FirestoreOperationType.LIST, p);
       return [];
     }
   },
@@ -85,7 +85,7 @@ export const firestoreService = {
         return docRef.id;
       }
     } catch (e) {
-      handleFirestoreError(e, OperationType.WRITE, p);
+      handleFirestoreError(e, FirestoreOperationType.WRITE, p);
       return '';
     }
   },
@@ -97,7 +97,7 @@ export const firestoreService = {
       const snap = await getDocs(q);
       return snap.docs.map(d => ({ ...d.data(), id: d.id } as unknown as HistoryEntry));
     } catch (e) {
-      handleFirestoreError(e, OperationType.LIST, p);
+      handleFirestoreError(e, FirestoreOperationType.LIST, p);
       return [];
     }
   },
@@ -107,7 +107,7 @@ export const firestoreService = {
     try {
       await addDoc(collection(db, p), { ...entry, ts: new Date().toISOString() });
     } catch (e) {
-      handleFirestoreError(e, OperationType.WRITE, p);
+      handleFirestoreError(e, FirestoreOperationType.WRITE, p);
     }
   },
 
@@ -117,7 +117,7 @@ export const firestoreService = {
       const snap = await getDocs(collection(db, p));
       return snap.docs.map(d => (d.data() as any).nombre);
     } catch (e) {
-      handleFirestoreError(e, OperationType.LIST, p);
+      handleFirestoreError(e, FirestoreOperationType.LIST, p);
       return [];
     }
   }

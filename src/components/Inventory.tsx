@@ -21,12 +21,13 @@ interface InventoryProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   onOpenAdd: () => void;
-  onOpenEdit: (id: number) => void;
-  onOpenDetail: (id: number) => void;
-  onOpenMove: (id: number) => void;
-  onOpenQR: (id: number) => void;
-  onRetire: (id: number) => void;
+  onOpenEdit: (id: string) => void;
+  onOpenDetail: (id: string) => void;
+  onOpenMove: (id: string) => void;
+  onOpenQR: (id: string) => void;
+  onRetire: (id: string) => void;
   user: User | null;
+  externalSearch?: string;
 }
 
 export default function Inventory({ 
@@ -41,9 +42,17 @@ export default function Inventory({
   onOpenMove, 
   onOpenQR, 
   onRetire,
-  user 
+  user,
+  externalSearch = ""
 }: InventoryProps) {
   const [search, setSearch] = useState("");
+
+  // Sync external search
+  React.useEffect(() => {
+    if (externalSearch) {
+      setSearch(externalSearch);
+    }
+  }, [externalSearch]);
   const [sort, setSort] = useState("name");
   const [catFilter, setCatFilter] = useState("");
   const [stateFilter, setStateFilter] = useState("");
@@ -63,7 +72,7 @@ export default function Inventory({
       if (sort === "name") return a.articulo.localeCompare(b.articulo);
       if (sort === "qty-d") return b.cantidad - a.cantidad;
       if (sort === "qty-a") return a.cantidad - b.cantidad;
-      return b.id - a.id;
+      return b.id.localeCompare(a.id);
     });
 
     return result;

@@ -14,7 +14,7 @@ export enum UserRole {
 }
 
 export interface Item {
-  id: number;
+  id: string;
   articulo: string;
   sucursal: string;
   cantidad: number;
@@ -30,8 +30,8 @@ export interface Item {
 }
 
 export interface Unit {
-  id: number;
-  item_id: number;
+  id: string;
+  item_id: string;
   unit_code: string;
   sucursal: string;
   estado: string;
@@ -42,11 +42,11 @@ export interface Unit {
 }
 
 export interface HistoryEntry {
-  id: number;
+  id: string;
   ts: string;
   tipo: OperationType;
-  item_id: number;
-  unit_id?: number | null;
+  item_id: string;
+  unit_id?: string | null;
   item_nombre: string;
   sucursal: string;
   detalle: string;
@@ -55,7 +55,7 @@ export interface HistoryEntry {
 }
 
 export interface User {
-  id: number;
+  id: string;
   username: string;
   name: string;
   role: UserRole;

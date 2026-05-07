@@ -5,7 +5,7 @@ import { Unit, Item } from "../types";
 interface QRScannerViewProps {
   units: Unit[];
   items: Item[];
-  onOpenDetail: (id: number) => void;
+  onOpenDetail: (id: string) => void;
 }
 
 export default function QRScannerView({ units, items, onOpenDetail }: QRScannerViewProps) {
@@ -45,7 +45,7 @@ export default function QRScannerView({ units, items, onOpenDetail }: QRScannerV
     intervalRef.current = setInterval(() => {
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      if (video?.readyState === video?.HAVE_ENOUGH_DATA && canvas) {
+      if (video && video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           canvas.width = video.videoWidth;
@@ -78,9 +78,9 @@ export default function QRScannerView({ units, items, onOpenDetail }: QRScannerV
     let matchUnit: Unit | undefined;
 
     // Check URL pattern /api/units/ID
-    const urlMatch = data.match(/\/api\/units\/(\d+)$/);
+    const urlMatch = data.match(/\/api\/units\/([a-zA-Z0-9_\-]+)$/);
     if (urlMatch) {
-      matchUnit = units.find(u => u.id === parseInt(urlMatch[1]));
+      matchUnit = units.find(u => u.id === urlMatch[1]);
     }
 
     // Check code pattern SOL-XXXXXX

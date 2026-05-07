@@ -8,10 +8,14 @@ import ReportsView from "./components/ReportsView";
 import QRScannerView from "./components/QRScannerView";
 import AIAssistant from "./components/AIAssistant";
 import Login from "./components/Login";
+import ItemModal from "./components/ItemModal";
+import MoveModal from "./components/MoveModal";
+import QRModal from "./components/QRModal";
 import { Menu, Search, Plus, MapPin, Users } from "lucide-react";
 import { firestoreService } from "./services/firestoreService";
-import { collection, doc, setDoc, getCountFromServer } from "firebase/firestore";
+import { collection, doc, setDoc, getCountFromServer, getDocs, where, query } from "firebase/firestore";
 import { db } from "./lib/firebase";
+import { OperationType } from "./types";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -23,7 +27,14 @@ export default function App() {
   const [sucursales, setSucursales] = useState<string[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
   const seeded = useRef(false);
+
+  // Modals state
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
 
   // Auth initialization
   useEffect(() => {
@@ -107,6 +118,94 @@ export default function App() {
     sessionStorage.removeItem("solmar_session");
   };
 
+  const handleSaveItem = async (data: Partial<Item>) => {
+    const id = await firestoreService.saveItem(data);
+    if (!id) return;
+
+    // Log history
+    await firestoreService.addHistory({
+      tipo: data.id ? OperationType.EDICION : OperationType.ALTA,
+      item_id: id,
+      item_nombre: data.articulo || "",
+      sucursal: data.sucursal || "",
+      detalle: data.id ? `Edición de datos del artículo` : `Alta de nuevo artículo en ${data.sucursal}`,
+      usuario: user?.username || "sistema"
+    });
+
+    await fetchData();
+  };
+
+  const handleMoveItem = async (itemId: string, origen: string, destino: string, cant: number, obs: string) => {
+    // 1. Get original item
+    const originalItem = items.find(i => i.id === itemId);
+    if (!originalItem) return;
+
+    // 2. Reduce original stock
+    await firestoreService.saveItem({
+      ...originalItem,
+      cantidad: originalItem.cantidad - cant
+    });
+
+    // 3. Increment or create destination stock
+    const destQuery = query(collection(db, 'items'), where('articulo', '==', originalItem.articulo), where('sucursal', '==', destino));
+    const destSnap = await getDocs(destQuery);
+
+    if (!destSnap.empty) {
+      const destDoc = destSnap.docs[0];
+      const destId = destDoc.id;
+      const destData = destDoc.data();
+      await firestoreService.saveItem({
+        id: destId,
+        cantidad: (destData.cantidad || 0) + cant
+      });
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { id: _, ...rest } = originalItem;
+      await firestoreService.saveItem({
+        ...rest,
+        sucursal: destino,
+        cantidad: cant,
+        obs: `Trasladado desde ${origen}. ${obs}`
+      });
+    }
+
+    // 4. Log history
+    await firestoreService.addHistory({
+      tipo: OperationType.MOVIMIENTO,
+      item_id: itemId,
+      item_nombre: originalItem.articulo,
+      sucursal: destino,
+      detalle: `Traslado de ${cant} unidad(es) desde ${origen} a ${destino}. ${obs}`,
+      usuario: user?.username || "sistema"
+    });
+
+    await fetchData();
+  };
+
+  const handleRetireItem = async (itemId: string) => {
+    if (!confirm("¿Está seguro de querer dar de baja este artículo?")) return;
+    
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    await firestoreService.saveItem({
+      ...item,
+      estado: "Dado de baja",
+      cantidad: 0
+    });
+
+    await firestoreService.addHistory({
+      tipo: OperationType.BAJA,
+      item_id: itemId,
+      item_nombre: item.articulo,
+      sucursal: item.sucursal,
+      detalle: `Artículo dado de baja del sistema`,
+      usuario: user?.username || "sin_usuario"
+    });
+
+    await fetchData();
+  };
+
   if (!user) {
     return <Login onLogin={handleLogin} />;
   }
@@ -130,12 +229,13 @@ export default function App() {
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             user={user}
-            onOpenAdd={() => {}}
-            onOpenEdit={() => {}}
-            onOpenDetail={(id) => { console.log('detail', id); }}
-            onOpenMove={() => {}}
-            onOpenQR={() => {}}
-            onRetire={() => {}}
+            onOpenAdd={() => { setSelectedItem(null); setIsItemModalOpen(true); }}
+            onOpenEdit={(id) => { setSelectedItem(items.find(i => i.id === id) || null); setIsItemModalOpen(true); }}
+            onOpenDetail={(id) => { setSelectedItem(items.find(i => i.id === id) || null); setIsItemModalOpen(true); }}
+            onOpenMove={(id) => { setSelectedItem(items.find(i => i.id === id) || null); setIsMoveModalOpen(true); }}
+            onOpenQR={(id) => { setSelectedItem(items.find(i => i.id === id) || null); setIsQRModalOpen(true); }}
+            onRetire={handleRetireItem}
+            externalSearch={searchTerm}
           />
         );
       case "history":
@@ -216,14 +316,22 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="hidden sm:flex items-center gap-2 px-4 h-9 bg-[var(--bg3)] hover:bg-[var(--bg4)] border border-[var(--line2)] rounded-full transition-all group">
-              <Search size={14} className="text-[var(--txt3)] group-hover:text-[var(--txt2)]" />
-              <span className="text-[12px] text-[var(--txt3)] font-medium">Búsqueda rápida...</span>
-              <kbd className="ml-4 h-5 px-1.5 rounded bg-[var(--bg2)] border border-[var(--line3)] text-[9px] font-mono text-[var(--txt3)] flex items-center justify-center">⌘K</kbd>
-            </button>
+            <div className="relative hidden sm:flex items-center">
+               <Search size={14} className="absolute left-3 text-[var(--txt3)]" />
+               <input 
+                 type="text" 
+                 placeholder="Búsqueda rápida..."
+                 className="h-9 pl-10 pr-4 bg-[var(--bg3)] hover:bg-[var(--bg4)] border border-[var(--line2)] rounded-full text-[12px] text-[var(--txt2)] placeholder:text-[var(--txt3)] outline-none focus:border-[var(--accent)] transition-all"
+                 value={searchTerm}
+                 onChange={e => setSearchTerm(e.target.value)}
+                 onFocus={() => setActiveView('inventory')}
+               />
+               <kbd className="absolute right-3 h-5 px-1.5 rounded bg-[var(--bg2)] border border-[var(--line3)] text-[9px] font-mono text-[var(--txt3)] flex items-center justify-center pointer-events-none">⌘K</kbd>
+            </div>
             
             {(user.role === UserRole.ADMIN || user.role === UserRole.TECNICO) && (
               <button 
+                onClick={() => { setSelectedItem(null); setIsItemModalOpen(true); }}
                 className="flex items-center gap-2 px-4 h-9 bg-[var(--accent)] hover:bg-[var(--accent2)] text-white font-semibold rounded-full text-[12px] shadow-[0_8px_16px_var(--ag)] transition-all"
               >
                 <Plus size={16} />
@@ -238,6 +346,29 @@ export default function App() {
         </div>
 
         <AIAssistant items={items} units={units} history={history} />
+
+        {/* Modals */}
+        <ItemModal 
+          isOpen={isItemModalOpen} 
+          onClose={() => { setIsItemModalOpen(false); setSelectedItem(null); }}
+          onSave={handleSaveItem}
+          item={selectedItem}
+          sucursales={sucursales}
+        />
+
+        <MoveModal 
+          isOpen={isMoveModalOpen} 
+          onClose={() => { setIsMoveModalOpen(false); setSelectedItem(null); }}
+          onMove={handleMoveItem}
+          item={selectedItem}
+          sucursales={sucursales}
+        />
+
+        <QRModal 
+          isOpen={isQRModalOpen}
+          onClose={() => { setIsQRModalOpen(false); setSelectedItem(null); }}
+          item={selectedItem}
+        />
       </main>
     </div>
   );
