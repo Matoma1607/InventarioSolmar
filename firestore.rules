@@ -1,0 +1,60 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Catch-all deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && getUserData().role == 'admin';
+    }
+
+    function isTecnico() {
+      return isSignedIn() && (getUserData().role == 'tecnico' || isAdmin());
+    }
+
+    function isViewer() {
+      return isSignedIn(); // Anyone signed in can view
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || (isSignedIn() && request.auth.uid == userId);
+    }
+
+    match /items/{itemId} {
+      allow read: if isViewer();
+      allow write: if isTecnico();
+    }
+
+    match /units/{unitId} {
+      allow read: if isViewer();
+      allow write: if isTecnico();
+    }
+
+    match /history/{logId} {
+      allow read: if isViewer();
+      allow write: if isTecnico();
+    }
+
+    match /sucursales/{sucId} {
+      allow read: if isViewer();
+      allow write: if isAdmin();
+    }
+  }
+}

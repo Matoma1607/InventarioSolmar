@@ -1,0 +1,85 @@
+{
+  "entities": {
+    "Item": {
+      "title": "Item",
+      "description": "Definition of a generic item in the catalog",
+      "type": "object",
+      "properties": {
+        "articulo": { "type": "string" },
+        "sucursal": { "type": "string" },
+        "cantidad": { "type": "number" },
+        "categoria": { "type": "string" },
+        "estado": { "type": "string" },
+        "serie": { "type": "string" },
+        "obs": { "type": "string" },
+        "minStock": { "type": "number" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["articulo", "cantidad", "categoria"]
+    },
+    "Unit": {
+      "title": "Unit",
+      "description": "An individual instance of an item",
+      "type": "object",
+      "properties": {
+        "item_id": { "type": "string" },
+        "unit_code": { "type": "string" },
+        "sucursal": { "type": "string" },
+        "estado": { "type": "string" },
+        "serie": { "type": "string" },
+        "obs": { "type": "string" },
+        "articulo": { "type": "string" },
+        "categoria": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["item_id", "unit_code", "sucursal"]
+    },
+    "HistoryEntry": {
+      "title": "HistoryEntry",
+      "description": "Log of inventory operations",
+      "type": "object",
+      "properties": {
+        "ts": { "type": "string", "format": "date-time" },
+        "tipo": { "type": "string" },
+        "item_id": { "type": "string" },
+        "unit_id": { "type": "string" },
+        "item_nombre": { "type": "string" },
+        "sucursal": { "type": "string" },
+        "detalle": { "type": "string" },
+        "usuario": { "type": "string" },
+        "extra": { "type": "object" }
+      },
+      "required": ["ts", "tipo", "item_nombre", "usuario"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Authorized user of the system",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "tecnico", "viewer"] },
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["username", "role"]
+    },
+    "Sucursal": {
+      "title": "Sucursal",
+      "description": "A branch or storage location",
+      "type": "object",
+      "properties": {
+        "nombre": { "type": "string" }
+      },
+      "required": ["nombre"]
+    }
+  },
+  "firestore": {
+    "items": { "schema": "Item", "description": "Global catalog of items" },
+    "units": { "schema": "Unit", "description": "Individual units of items" },
+    "history": { "schema": "HistoryEntry", "description": "Activity logs" },
+    "users": { "schema": "User", "description": "System users" },
+    "sucursales": { "schema": "Sucursal", "description": "List of locations" }
+  }
+}
