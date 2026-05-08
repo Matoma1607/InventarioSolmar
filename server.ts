@@ -2,7 +2,7 @@ import express from "express";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -29,31 +29,28 @@ async function startServer() {
     }
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
-      
-      const systemInstruction = `
-        Eres un asistente de gestión de activos IT para InventarioSolmar.
-        Información actual del inventario:
-        - Artículos únicos: ${items.length}
-        - Unidades físicas totales: ${units.length}
-        - Unidades operativas: ${units.filter((u: any) => u.estado === 'Operativo').length}
-        - Unidades en reparación: ${units.filter((u: any) => u.estado === 'En reparación').length}
-        
-        Últimos 5 eventos de historial:
-        ${history.slice(0, 5).map((h: any) => `- ${h.ts}: ${h.tipo} - ${h.item_nombre} (${h.detalle})`).join('\n')}
-
-        Responde de forma concisa y técnica a la consulta del usuario.
-      `;
-
-      const response = await ai.models.generateContent({
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ 
         model: "gemini-1.5-flash",
-        contents: query,
-        config: {
-          systemInstruction
-        }
+        systemInstruction: `
+          Eres un asistente de gestión de activos IT para InventarioSolmar.
+          Información actual del inventario:
+          - Artículos únicos: ${items.length}
+          - Unidades físicas totales: ${units.length}
+          - Unidades operativas: ${units.filter((u: any) => u.estado === 'Operativo').length}
+          - Unidades en reparación: ${units.filter((u: any) => u.estado === 'En reparación').length}
+          
+          Últimos 5 eventos de historial:
+          ${history.slice(0, 5).map((h: any) => `- ${h.ts}: ${h.tipo} - ${h.item_nombre} (${h.detalle})`).join('\n')}
+
+          Responde de forma concisa y técnica a la consulta del usuario.
+        `
       });
+
+      const result = await model.generateContent(query);
+      const responseText = result.response.text();
       
-      res.json({ text: response.text || "No pude generar una respuesta." });
+      res.json({ text: responseText || "No pude generar una respuesta." });
     } catch (error) {
       console.error("Gemini Error:", error);
       res.status(500).json({ error: "Error al procesar la solicitud con Gemini." });
