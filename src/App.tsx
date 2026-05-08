@@ -7,6 +7,9 @@ import HistoryView from "./components/HistoryView";
 import ReportsView from "./components/ReportsView";
 import FacturasView from "./components/FacturasView";
 import QRScannerView from "./components/QRScannerView";
+import RepairView from "./components/RepairView";
+import PrintView from "./components/PrintView";
+import OperationsSearchView from "./components/OperationsSearchView";
 import Login from "./components/Login";
 import ItemModal from "./components/ItemModal";
 import MoveModal from "./components/MoveModal";
@@ -182,6 +185,27 @@ export default function App() {
     await fetchData();
   };
 
+  const handleUpdateStatus = async (itemId: string, newStatus: string, detail: string) => {
+    const item = items.find(i => i.id === itemId);
+    if (!item) return;
+
+    await firestoreService.saveItem({
+      ...item,
+      estado: newStatus
+    });
+
+    await firestoreService.addHistory({
+      tipo: OperationType.REPARACION,
+      item_id: itemId,
+      item_nombre: item.articulo,
+      sucursal: item.sucursal,
+      detalle: detail,
+      usuario: user?.name || user?.username || "sistema"
+    });
+
+    await fetchData();
+  };
+
   const handleRetireItem = async (itemId: string) => {
     if (!confirm("¿Está seguro de querer dar de baja este artículo?")) return;
     
@@ -258,6 +282,16 @@ export default function App() {
         return <ReportsView items={items} units={units} history={history} sucursales={sucursales} />;
       case "scan":
         return <QRScannerView items={items} units={units} onOpenDetail={(id) => { setActiveView('inventory'); console.log('open', id); }} />;
+      case "repair":
+        return <RepairView items={items} mode="repair" onUpdateStatus={handleUpdateStatus} user={user!} />;
+      case "return":
+        return <RepairView items={items} mode="return" onUpdateStatus={handleUpdateStatus} user={user!} />;
+      case "move":
+        return <OperationsSearchView items={items} mode="move" onAction={(item: Item) => { setSelectedItem(item); setIsMoveModalOpen(true); }} />;
+      case "replace":
+        return <OperationsSearchView items={items} mode="replace" onAction={(item: Item) => { setSelectedItem(item); setIsItemModalOpen(true); }} />;
+      case "print":
+        return <PrintView items={items} />;
       case "branches":
         return (
           <div className="max-w-2xl mx-auto py-10 space-y-4">
