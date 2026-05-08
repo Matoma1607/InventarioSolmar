@@ -2,12 +2,12 @@ import express from "express";
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
-import { createRequire } from "node:module";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
+import multer from "multer";
 
-const require = createRequire(import.meta.url);
-const multer = require("multer");
+// Use a type-safe way to handle multer's default export if needed
+const uploadMiddleware = (multer as any).default || multer;
 
 dotenv.config();
 
@@ -29,6 +29,15 @@ async function startServer() {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
+  // Serve uploads directory - Move this up so it's always accessible
+  app.use("/uploads", express.static(uploadsDir));
+
+  // Logger middleware
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`);
+    next();
+  });
+
   const storage = multer.diskStorage({
     destination: (req: any, file: any, cb: any) => {
       cb(null, uploadsDir);
@@ -41,34 +50,48 @@ async function startServer() {
 
   const upload = multer({ 
     storage,
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+    limits: { fileSize: 20 * 1024 * 1024 } // Increased to 20MB
   });
 
   app.post("/api/upload", (req: any, res: any) => {
-    upload.single("file")(req, res, (err: any) => {
+    console.log(`[${new Date().toISOString()}] Incoming upload request...`);
+    
+    // Use the resolved middleware
+    const uploader = uploadMiddleware({ 
+      storage,
+      limits: { fileSize: 20 * 1024 * 1024 } 
+    }).single("file");
+
+    uploader(req, res, (err: any) => {
       if (err) {
-        console.error("Multer error:", err);
-        return res.status(500).json({ error: "Error procesando el archivo: " + err.message });
+        console.error("Multer error detail:", err);
+        return res.status(500).json({ 
+          error: "Error procesando el archivo", 
+          details: err.message,
+          code: err.code 
+        });
       }
       
       const multerReq = req as any;
       if (!multerReq.file) {
-        console.error("No file in request");
-        return res.status(400).json({ error: "No se subió ningún archivo." });
+        console.error("No file found in request payload");
+        return res.status(400).json({ error: "No se subió ningún archivo o el campo no es 'file'." });
       }
 
       const fileUrl = `/uploads/${multerReq.file.filename}`;
-      console.log(`File uploaded successfully: ${fileUrl}`);
-      res.json({ url: fileUrl });
+      console.log(`Upload successful: ${fileUrl} (${multerReq.file.size} bytes)`);
+      res.json({ url: fileUrl, filename: multerReq.file.originalname });
     });
   });
-
-  // Serve uploads directory
-  app.use("/uploads", express.static(uploadsDir));
 
   // Health check
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", mode: process.env.NODE_ENV || "development" });
+  });
+
+  // Fallback for API routes that don't exist
+  app.all("/api/*", (req, res) => {
+    res.status(404).json({ error: `Route ${req.method} ${req.url} not found` });
   });
 
   // Vite middleware for development
