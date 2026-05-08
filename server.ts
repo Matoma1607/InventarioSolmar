@@ -2,7 +2,6 @@ import express from "express";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -24,56 +23,74 @@ async function startServer() {
     res.json({ status: "ok", mode: process.env.NODE_ENV || "development" });
   });
 
-  // API Route for Gemini Assistant
+  // API Route for Local Inventory Assistant (No AI)
   app.post("/api/assistant", async (req, res) => {
-    console.log("POST /api/assistant received");
-    const { query, items, units, history } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.API_KEY;
+    const { query, items = [], units = [], history = [] } = req.body;
+    
+    // Normalizar texto (quitar tildes, minúsculas)
+    const normalize = (text: string) => 
+      text.toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim();
 
-    if (!apiKey) {
-      console.warn("WARNING: No Gemini API Key. Using simplified response.");
+    const q = normalize(query || "");
+    let response = "";
+
+    // 1. Ayuda / Comandos generales
+    if (q.includes("ayuda") || q.includes("que puedes hacer")) {
+      response = "Puedo informarte sobre el stock total, el estado de las unidades (operativas/reparación), detalles por artículo específico y últimos movimientos del historial.";
+    }
+    // 2. Resumen total
+    else if (q.includes("total") || q.includes("cuantos hay") || q.includes("resumen")) {
+      const operativos = units.filter((u: any) => u.estado === 'Operativo').length;
+      const reparacion = units.filter((u: any) => u.estado === 'En reparación').length;
+      response = `Actualmente hay ${units.length} unidades físicas en total, distribuidas en ${items.length} categorías. Tenemos ${operativos} operativas y ${reparacion} en reparación.`;
+    }
+    // 3. Consulta de artículos específicos
+    else {
+      // Intentar encontrar si menciona algún artículo
+      const itemMentioned = items.find((it: any) => q.includes(normalize(it.nombre)));
       
-      const q = query?.toLowerCase() || "";
-      let response = "No hay una clave de API configurada para usar la IA. ";
-      
-      if (q.includes("cuántos") || q.includes("total")) {
-        response += `Actualmente hay un total de ${units?.length || 0} unidades físicas distribuidas en ${items?.length || 0} categorías.`;
-      } else if (q.includes("estado") || q.includes("operativo")) {
-        const operativos = units?.filter((u: any) => u.estado === 'Operativo').length || 0;
-        response += `Hay ${operativos} unidades en estado Operativo y ${(units?.length || 0) - operativos} en otros estados.`;
-      } else {
-        response += "Configura GEMINI_API_KEY para habilitar funciones avanzadas.";
+      if (itemMentioned) {
+        const itemUnits = units.filter((u: any) => u.itemId === itemMentioned.id);
+        const operativos = itemUnits.filter((u: any) => u.estado === 'Operativo').length;
+        const reparacion = itemUnits.filter((u: any) => u.estado === 'En reparación').length;
+        
+        response = `Para "${itemMentioned.nombre}": Hay un total de ${itemUnits.length} unidades. Estado: ${operativos} operativas y ${reparacion} en reparación.`;
+        
+        if (q.includes("donde") || q.includes("ubicacion")) {
+          const sub = itemUnits.length > 0 ? `Se encuentran en: ${[...new Set(itemUnits.map((u:any) => u.ubicacion))].join(", ")}` : "";
+          response += ` ${sub}`;
+        }
+      } 
+      // 4. Consulta de estados generales
+      else if (q.includes("operativo") || q.includes("funcionan")) {
+        const list = units.filter((u: any) => u.estado === 'Operativo');
+        response = `Hay ${list.length} unidades operativas en total.`;
       }
-      
-      return res.json({ text: response });
+      else if (q.includes("reparacion") || q.includes("roto") || q.includes("arreglo")) {
+        const list = units.filter((u: any) => u.estado === 'En reparación');
+        response = list.length > 0 
+          ? `Hay ${list.length} unidades en reparación. Principalmente: ${[...new Set(list.map((u:any) => u.item_nombre))].join(", ")}.`
+          : "¡Buenas noticias! No hay ninguna unidad registrada en reparación actualmente.";
+      }
+      // 5. Historial / Cambios
+      else if (q.includes("historial") || q.includes("paso") || q.includes("ultimo")) {
+        if (history.length > 0) {
+          const last = history[0];
+          response = `El último movimiento registrado fue el ${last.ts}: ${last.tipo} de ${last.item_nombre} (${last.detalle}).`;
+        } else {
+          response = "No hay registros de movimientos recientes en el historial.";
+        }
+      }
+      // 6. No se entendió
+      else {
+        response = "No logré identificar qué artículo o dato buscas. Prueba preguntando '¿Cuántos laptops hay?' o '¿Qué hay en reparación?'.";
+      }
     }
 
-    try {
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ 
-        model: "gemini-1.5-flash",
-        systemInstruction: `
-          Eres un asistente de gestión de activos IT para InventarioSolmar.
-          Información actual del inventario:
-          - Artículos: ${items?.length}
-          - Unidades: ${units?.length}
-          - Operativas: ${units?.filter((u: any) => u.estado === 'Operativo').length}
-          - Reparación: ${units?.filter((u: any) => u.estado === 'En reparación').length}
-          
-          Últimos eventos:
-          ${history?.slice(0, 5).map((h: any) => `- ${h.item_nombre}: ${h.detalle}`).join('\n')}
-
-          Responde técnico y breve.
-        `
-      });
-
-      const result = await model.generateContent(query);
-      const responseText = result.response.text();
-      res.json({ text: responseText || "No pude generar respuesta." });
-    } catch (error) {
-      console.error("Gemini Error:", error);
-      res.status(500).json({ error: "Error al procesar la IA." });
-    }
+    res.json({ text: response });
   });
 
   // Vite middleware for development
