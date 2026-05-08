@@ -18,6 +18,7 @@ async function startServer() {
 
   // API Route for Gemini Assistant
   app.post("/api/assistant", async (req, res) => {
+    console.log("API: Assistant request received");
     const { query, items, units, history } = req.body;
 
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.API_KEY;
