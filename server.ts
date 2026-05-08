@@ -1,40 +1,48 @@
 import express from "express";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-// En Node 20.11+ / 22, import.meta.dirname ya está disponible
-const __dirname = import.meta.dirname;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const root = process.cwd();
 
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  console.log("Starting server initialization...");
+
   app.use(express.json());
+
+  // Health check
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", mode: process.env.NODE_ENV || "development" });
+  });
 
   // API Route for Gemini Assistant
   app.post("/api/assistant", async (req, res) => {
+    console.log("POST /api/assistant received");
     const { query, items, units, history } = req.body;
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.API_KEY;
 
-    // Si no hay API Key, respondemos con una lógica simple "offline" (sin IA)
     if (!apiKey) {
-      console.warn("ADVERTENCIA: No hay API Key de Gemini. Usando respuesta simplificada.");
+      console.warn("WARNING: No Gemini API Key. Using simplified response.");
       
-      const q = query.toLowerCase();
+      const q = query?.toLowerCase() || "";
       let response = "No hay una clave de API configurada para usar la IA. ";
       
       if (q.includes("cuántos") || q.includes("total")) {
-        response += `Actualmente hay un total de ${units.length} unidades físicas distribuidas en ${items.length} categorías de artículos.`;
+        response += `Actualmente hay un total de ${units?.length || 0} unidades físicas distribuidas en ${items?.length || 0} categorías.`;
       } else if (q.includes("estado") || q.includes("operativo")) {
-        const operativos = units.filter((u: any) => u.estado === 'Operativo').length;
-        response += `Hay ${operativos} unidades en estado Operativo y ${units.length - operativos} que requieren atención o están en reparación.`;
+        const operativos = units?.filter((u: any) => u.estado === 'Operativo').length || 0;
+        response += `Hay ${operativos} unidades en estado Operativo y ${(units?.length || 0) - operativos} en otros estados.`;
       } else {
-        response += "Puedes consultar sobre totales o estados del inventario. Para análisis avanzados, configura GEMINI_API_KEY.";
+        response += "Configura GEMINI_API_KEY para habilitar funciones avanzadas.";
       }
       
       return res.json({ text: response });
@@ -47,21 +55,21 @@ async function startServer() {
         systemInstruction: `
           Eres un asistente de gestión de activos IT para InventarioSolmar.
           Información actual del inventario:
-          - Artículos únicos: ${items?.length}
-          - Unidades físicas totales: ${units?.length}
-          - Unidades operativas: ${units?.filter((u: any) => u.estado === 'Operativo').length}
-          - Unidades en reparación: ${units?.filter((u: any) => u.estado === 'En reparación').length}
+          - Artículos: ${items?.length}
+          - Unidades: ${units?.length}
+          - Operativas: ${units?.filter((u: any) => u.estado === 'Operativo').length}
+          - Reparación: ${units?.filter((u: any) => u.estado === 'En reparación').length}
           
-          Últimos 5 eventos de historial:
-          ${history?.slice(0, 5).map((h: any) => `- ${h.ts}: ${h.tipo} - ${h.item_nombre} (${h.detalle})`).join('\n')}
+          Últimos eventos:
+          ${history?.slice(0, 5).map((h: any) => `- ${h.item_nombre}: ${h.detalle}`).join('\n')}
 
-          Responde de forma concisa y técnica. Si no sabes algo, dilo.
+          Responde técnico y breve.
         `
       });
 
       const result = await model.generateContent(query);
       const responseText = result.response.text();
-      res.json({ text: responseText || "No pude generar una respuesta." });
+      res.json({ text: responseText || "No pude generar respuesta." });
     } catch (error) {
       console.error("Gemini Error:", error);
       res.status(500).json({ error: "Error al procesar la IA." });
@@ -70,7 +78,7 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
-    // Usamos imports dinámicos dentro de la función para mayor compatibilidad
+    console.log("Configuring Vite middleware...");
     const react = (await import("@vitejs/plugin-react")).default;
     const tailwindcss = (await import("@tailwindcss/vite")).default;
 
@@ -91,6 +99,7 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
+    console.log("Configuring static production serving...");
     const distPath = path.join(root, "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
@@ -99,11 +108,12 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`\x1b[32m✔ Servidor ejecutándose en http://0.0.0.0:${PORT}\x1b[0m`);
+    console.log(`\x1b[32m✔ Server running at http://0.0.0.0:${PORT}\x1b[0m`);
   });
 }
 
 startServer().catch(err => {
-  console.error("Critical server error:", err);
+  console.error("CRITICAL SERVER ERROR:", err);
   process.exit(1);
 });
+
