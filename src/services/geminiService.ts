@@ -1,8 +1,7 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { Item, Unit, HistoryEntry } from "../types";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export const inventoryAssistant = async (
   query: string, 
@@ -10,8 +9,8 @@ export const inventoryAssistant = async (
   units: Unit[], 
   history: HistoryEntry[]
 ) => {
-  const context = `
-    Eres un asistente de gestión de activos IT para Óptica Solmar.
+  const systemInstruction = `
+    Eres un asistente de gestión de activos IT para InventarioSolmar.
     Información actual del inventario:
     - Artículos únicos: ${items.length}
     - Unidades físicas totales: ${units.length}
@@ -33,9 +32,15 @@ export const inventoryAssistant = async (
   `;
 
   try {
-    const result = await model.generateContent([context, query]);
-    const response = await result.response;
-    return response.text();
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: query,
+      config: {
+        systemInstruction
+      }
+    });
+    
+    return response.text || "No pude generar una respuesta clara.";
   } catch (error) {
     console.error("Gemini Error:", error);
     return "Lo siento, hubo un error al procesar tu consulta con la IA.";
