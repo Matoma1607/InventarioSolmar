@@ -1,4 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
 import { Item, Unit, HistoryEntry } from "../types";
 
 export const inventoryAssistant = async (

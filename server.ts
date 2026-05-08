@@ -6,8 +6,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// En Node 22.11 podemos usar import.meta.dirname directamente
-const __dirname = import.meta.dirname || path.dirname(new URL(import.meta.url).pathname);
+// En Node 20.11+ / 22, import.meta.dirname ya está disponible
+const __dirname = import.meta.dirname;
 const root = process.cwd();
 
 async function startServer() {
@@ -18,14 +18,26 @@ async function startServer() {
 
   // API Route for Gemini Assistant
   app.post("/api/assistant", async (req, res) => {
-    console.log("API: Assistant request received");
     const { query, items, units, history } = req.body;
-
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.API_KEY;
+
+    // Si no hay API Key, respondemos con una lógica simple "offline" (sin IA)
     if (!apiKey) {
-      return res.status(500).json({ 
-        error: "No se encontró una clave de API configurada. Por favor, configura GEMINI_API_KEY en tu archivo .env local." 
-      });
+      console.warn("ADVERTENCIA: No hay API Key de Gemini. Usando respuesta simplificada.");
+      
+      const q = query.toLowerCase();
+      let response = "No hay una clave de API configurada para usar la IA. ";
+      
+      if (q.includes("cuántos") || q.includes("total")) {
+        response += `Actualmente hay un total de ${units.length} unidades físicas distribuidas en ${items.length} categorías de artículos.`;
+      } else if (q.includes("estado") || q.includes("operativo")) {
+        const operativos = units.filter((u: any) => u.estado === 'Operativo').length;
+        response += `Hay ${operativos} unidades en estado Operativo y ${units.length - operativos} que requieren atención o están en reparación.`;
+      } else {
+        response += "Puedes consultar sobre totales o estados del inventario. Para análisis avanzados, configura GEMINI_API_KEY.";
+      }
+      
+      return res.json({ text: response });
     }
 
     try {
@@ -35,35 +47,32 @@ async function startServer() {
         systemInstruction: `
           Eres un asistente de gestión de activos IT para InventarioSolmar.
           Información actual del inventario:
-          - Artículos únicos: ${items.length}
-          - Unidades físicas totales: ${units.length}
-          - Unidades operativas: ${units.filter((u: any) => u.estado === 'Operativo').length}
-          - Unidades en reparación: ${units.filter((u: any) => u.estado === 'En reparación').length}
+          - Artículos únicos: ${items?.length}
+          - Unidades físicas totales: ${units?.length}
+          - Unidades operativas: ${units?.filter((u: any) => u.estado === 'Operativo').length}
+          - Unidades en reparación: ${units?.filter((u: any) => u.estado === 'En reparación').length}
           
           Últimos 5 eventos de historial:
-          ${history.slice(0, 5).map((h: any) => `- ${h.ts}: ${h.tipo} - ${h.item_nombre} (${h.detalle})`).join('\n')}
+          ${history?.slice(0, 5).map((h: any) => `- ${h.ts}: ${h.tipo} - ${h.item_nombre} (${h.detalle})`).join('\n')}
 
-          Responde de forma concisa y técnica a la consulta del usuario.
+          Responde de forma concisa y técnica. Si no sabes algo, dilo.
         `
       });
 
       const result = await model.generateContent(query);
       const responseText = result.response.text();
-      
       res.json({ text: responseText || "No pude generar una respuesta." });
     } catch (error) {
       console.error("Gemini Error:", error);
-      res.status(500).json({ error: "Error al procesar la solicitud con Gemini." });
+      res.status(500).json({ error: "Error al procesar la IA." });
     }
   });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
-    // Importación dinámica para evitar problemas de resolución en el arranque
-    const [react, tailwindcss] = await Promise.all([
-      import("@vitejs/plugin-react").then(m => m.default),
-      import("@tailwindcss/vite").then(m => m.default)
-    ]);
+    // Usamos imports dinámicos dentro de la función para mayor compatibilidad
+    const react = (await import("@vitejs/plugin-react")).default;
+    const tailwindcss = (await import("@tailwindcss/vite")).default;
 
     const vite = await createViteServer({
       configFile: false,
@@ -90,8 +99,11 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`\x1b[32m✔ Servidor ejecutándose en http://localhost:${PORT}\x1b[0m`);
+    console.log(`\x1b[32m✔ Servidor ejecutándose en http://0.0.0.0:${PORT}\x1b[0m`);
   });
 }
 
-startServer();
+startServer().catch(err => {
+  console.error("Critical server error:", err);
+  process.exit(1);
+});
