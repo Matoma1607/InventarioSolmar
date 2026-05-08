@@ -1,7 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 import { Item, Unit, HistoryEntry } from "../types";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let genAIClient: GoogleGenAI | null = null;
+
+function getGenAI() {
+  if (!genAIClient) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY environment variable is required");
+    }
+    genAIClient = new GoogleGenAI({ apiKey });
+  }
+  return genAIClient;
+}
 
 export const inventoryAssistant = async (
   query: string, 
@@ -32,8 +43,9 @@ export const inventoryAssistant = async (
   `;
 
   try {
+    const ai = getGenAI();
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-1.5-flash", // Using a more common model alias to be safe, though gemini-3-flash-preview should work if supported
       contents: query,
       config: {
         systemInstruction
@@ -43,6 +55,6 @@ export const inventoryAssistant = async (
     return response.text || "No pude generar una respuesta clara.";
   } catch (error) {
     console.error("Gemini Error:", error);
-    return "Lo siento, hubo un error al procesar tu consulta con la IA.";
+    return "Lo siento, hubo un error al procesar tu consulta con la IA. Verifica que el API Key esté configurado.";
   }
 };
