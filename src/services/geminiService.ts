@@ -15,15 +15,16 @@ export const inventoryAssistant = async (
       body: JSON.stringify({ query, items, units, history }),
     });
 
+    console.log("Assistant Response Status:", response.status);
+
     if (!response.ok) {
-      const errorData = await response.json();
-      if (errorData.error?.includes("clave de API")) {
-        return "El Asistente IA no está disponible porque no se ha configurado la clave en el servidor. Por favor, añade GEMINI_API_KEY o GOOGLE_API_KEY en los Secretos de AI Studio.";
-      }
-      throw new Error("Server error");
+      const text = await response.text();
+      console.error("Assistant Error Text:", text);
+      throw new Error(`Server error: ${response.status}`);
     }
 
     const data = await response.json();
+    console.log("Assistant Data Received:", data);
     return data.text;
   } catch (error) {
     console.error("Gemini Error:", error);
