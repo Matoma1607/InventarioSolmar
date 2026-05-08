@@ -120,5 +120,14 @@ export const firestoreService = {
       handleFirestoreError(e, FirestoreOperationType.LIST, p);
       return [];
     }
+  },
+
+  async saveSucursal(nombre: string): Promise<void> {
+    const p = 'sucursales';
+    try {
+      await setDoc(doc(db, p, nombre), { nombre });
+    } catch (e) {
+      handleFirestoreError(e, FirestoreOperationType.WRITE, p);
+    }
   }
 };

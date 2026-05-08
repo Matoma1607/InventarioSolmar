@@ -205,6 +205,14 @@ export default function App() {
     await fetchData();
   };
 
+  const handleAddSucursal = async () => {
+    const nombre = prompt("Ingrese el nombre de la nueva sucursal:");
+    if (!nombre) return;
+    
+    await firestoreService.saveSucursal(nombre.trim());
+    await fetchData();
+  };
+
   if (!user) {
     return <Login onLogin={handleLogin} />;
   }
@@ -252,7 +260,12 @@ export default function App() {
                    <h2 className="text-xl font-bold tracking-tight">Sucursales Activas</h2>
                 </div>
                 {user.role === UserRole.ADMIN && (
-                  <button className="h-9 px-4 bg-[var(--accent)] text-white text-[12px] font-bold rounded-full">Nueva Sucursal</button>
+                  <button 
+                    onClick={handleAddSucursal}
+                    className="h-9 px-4 bg-[var(--accent)] text-white text-[12px] font-bold rounded-full"
+                  >
+                    Nueva Sucursal
+                  </button>
                 )}
              </div>
              <div className="bg-[var(--bg2)] border border-[var(--line)] rounded-[var(--r3)] divide-y divide-[var(--line)]">
