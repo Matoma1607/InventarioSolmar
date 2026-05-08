@@ -25,24 +25,28 @@ export default function InvoicesView({ items, onOpenEdit, onUpdateItem }: Invoic
     const file = e.target.files?.[0];
     if (!file) return;
 
+    if (file.size > 2 * 1024 * 1024) {
+        alert("El archivo es demasiado grande (máximo 2MB)");
+        return;
+    }
+
     setUploadingId(itemId);
-    const formData = new FormData();
-    formData.append("file", file);
 
     try {
-      const response = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) throw new Error("Upload failed");
-
-      const { url } = await response.json();
-      await onUpdateItem(itemId, { factura: url });
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const base64 = event.target?.result as string;
+        await onUpdateItem(itemId, { factura: base64 });
+        setUploadingId(null);
+      };
+      reader.onerror = () => {
+        alert("Error al leer el archivo");
+        setUploadingId(null);
+      };
+      reader.readAsDataURL(file);
     } catch (error) {
-      console.error("Error uploading file:", error);
-      alert("Error al subir el archivo.");
-    } finally {
+      console.error("Error processing file:", error);
+      alert("Error al procesar el archivo.");
       setUploadingId(null);
     }
   };
