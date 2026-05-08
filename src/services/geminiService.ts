@@ -1,25 +1,18 @@
 import { GoogleGenAI } from "@google/genai";
 import { Item, Unit, HistoryEntry } from "../types";
 
-let genAIClient: GoogleGenAI | null = null;
-
-function getGenAI() {
-  if (!genAIClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("GEMINI_API_KEY environment variable is required");
-    }
-    genAIClient = new GoogleGenAI({ apiKey });
-  }
-  return genAIClient;
-}
-
 export const inventoryAssistant = async (
   query: string, 
   items: Item[], 
   units: Unit[], 
   history: HistoryEntry[]
 ) => {
+  const apiKey = process.env.GEMINI_API_KEY;
+  
+  if (!apiKey || apiKey === "undefined") {
+    return "El Asistente IA no está disponible porque no se ha configurado el GEMINI_API_KEY. Por favor, añádelo en los Secretos de AI Studio.";
+  }
+
   const systemInstruction = `
     Eres un asistente de gestión de activos IT para InventarioSolmar.
     Información actual del inventario:
@@ -43,9 +36,9 @@ export const inventoryAssistant = async (
   `;
 
   try {
-    const ai = getGenAI();
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: "gemini-1.5-flash", // Using a more common model alias to be safe, though gemini-3-flash-preview should work if supported
+      model: "gemini-3-flash-preview",
       contents: query,
       config: {
         systemInstruction
@@ -55,6 +48,6 @@ export const inventoryAssistant = async (
     return response.text || "No pude generar una respuesta clara.";
   } catch (error) {
     console.error("Gemini Error:", error);
-    return "Lo siento, hubo un error al procesar tu consulta con la IA. Verifica que el API Key esté configurado.";
+    return "Lo siento, hubo un error al procesar tu consulta con la IA. Verifica que el API Key sea válido y tengas cuota disponible.";
   }
 };
