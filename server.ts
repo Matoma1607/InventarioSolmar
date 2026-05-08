@@ -1,6 +1,6 @@
 import express from "express";
 import path from "path";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
@@ -24,7 +24,7 @@ async function startServer() {
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.API_KEY;
     if (!apiKey) {
       return res.status(500).json({ 
-        error: "No se encontró una clave de API configurada. Por favor, configura GEMINI_API_KEY o GOOGLE_API_KEY en los Secretos de AI Studio." 
+        error: "No se encontró una clave de API configurada. Por favor, configura GEMINI_API_KEY en tu archivo .env local." 
       });
     }
 
@@ -46,7 +46,7 @@ async function startServer() {
       `;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
+        model: "gemini-1.5-flash",
         contents: query,
         config: {
           systemInstruction
@@ -63,11 +63,8 @@ async function startServer() {
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
-      root: process.cwd(),
       server: { 
         middlewareMode: true,
-        host: '0.0.0.0',
-        port: 3000
       },
       appType: "spa",
     });
@@ -81,7 +78,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`\x1b[32m✔ Servidor ejecutándose en http://localhost:${PORT}\x1b[0m`);
   });
 }
 
