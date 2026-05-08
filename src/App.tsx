@@ -6,7 +6,6 @@ import Inventory from "./components/Inventory";
 import HistoryView from "./components/HistoryView";
 import ReportsView from "./components/ReportsView";
 import QRScannerView from "./components/QRScannerView";
-import AIAssistant from "./components/AIAssistant";
 import Login from "./components/Login";
 import ItemModal from "./components/ItemModal";
 import MoveModal from "./components/MoveModal";
@@ -344,8 +343,6 @@ export default function App() {
         <div className="flex-1 p-8 overflow-y-auto custom-scrollbar">
           {renderView()}
         </div>
-
-        <AIAssistant items={items} units={units} history={history} />
 
         {/* Modals */}
         <ItemModal 
