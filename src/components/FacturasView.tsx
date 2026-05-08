@@ -1,13 +1,16 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Item } from "../types";
-import { FileText, ExternalLink, AlertCircle, CheckCircle } from "lucide-react";
+import { FileText, ExternalLink, AlertCircle, CheckCircle, Upload, Loader2 } from "lucide-react";
 
 interface InvoicesViewProps {
   items: Item[];
   onOpenEdit: (id: string) => void;
+  onUpdateItem: (id: string, data: Partial<Item>) => Promise<void>;
 }
 
-export default function InvoicesView({ items, onOpenEdit }: InvoicesViewProps) {
+export default function InvoicesView({ items, onOpenEdit, onUpdateItem }: InvoicesViewProps) {
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  
   const stats = useMemo(() => {
     const withInv = items.filter(i => i.factura).length;
     const withoutInv = items.length - withInv;
@@ -17,6 +20,32 @@ export default function InvoicesView({ items, onOpenEdit }: InvoicesViewProps) {
 
   const itemsWithInvoice = items.filter(i => i.factura);
   const itemsWithoutInvoice = items.filter(i => !i.factura);
+
+  const handleFileChange = async (itemId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingId(itemId);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error("Upload failed");
+
+      const { url } = await response.json();
+      await onUpdateItem(itemId, { factura: url });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert("Error al subir el archivo.");
+    } finally {
+      setUploadingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -79,17 +108,35 @@ export default function InvoicesView({ items, onOpenEdit }: InvoicesViewProps) {
 
             <div className="space-y-2 max-h-[500px] overflow-y-auto no-scrollbar">
               {itemsWithoutInvoice.map(item => (
-                <div key={item.id} className="p-3 bg-[var(--bg3)] rounded-[var(--r)] border border-[var(--line2)] flex items-center justify-between group">
+                <div key={item.id} className="p-3 bg-[var(--bg3)] rounded-[var(--r)] border border-[var(--line2)] flex items-center justify-between group overflow-hidden relative">
+                  {uploadingId === item.id && (
+                    <div className="absolute inset-0 bg-[var(--bg2)]/80 flex items-center justify-center z-10">
+                      <Loader2 size={20} className="text-[var(--accent)] animate-spin" />
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="text-[12px] font-medium text-[var(--txt)] truncate">{item.articulo}</div>
                     <div className="text-[10px] text-[var(--txt3)] uppercase tracking-tighter">SOL-{String(item.id).padStart(6, '0')}</div>
                   </div>
-                  <button 
-                    onClick={() => onOpenEdit(item.id)}
-                    className="flex items-center gap-1 px-3 py-1 bg-[var(--bg4)] hover:bg-[var(--as)] text-[var(--txt2)] hover:text-[var(--accent)] text-[10px] font-bold rounded border border-[var(--line2)] transition-all"
-                  >
-                    Adjuntar
-                  </button>
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--accent)] hover:bg-[var(--accent2)] text-white text-[10px] font-bold rounded cursor-pointer transition-all shadow-sm">
+                      <Upload size={12} />
+                      Adjuntar PDF
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="application/pdf,image/*"
+                        onChange={(e) => handleFileChange(item.id, e)}
+                      />
+                    </label>
+                    <button 
+                      onClick={() => onOpenEdit(item.id)}
+                      className="p-1.5 bg-[var(--bg4)] hover:bg-[var(--as)] text-[var(--txt2)] hover:text-[var(--accent)] rounded border border-[var(--line2)] transition-all"
+                      title="Editar ficha completa"
+                    >
+                      <FileText size={14} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

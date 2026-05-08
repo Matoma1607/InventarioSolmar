@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import Modal from "./Modal";
 import { Item } from "../types";
-import { Save, AlertTriangle } from "lucide-react";
+import { Save, AlertTriangle, Upload, Check, Loader2 } from "lucide-react";
 
 interface ItemModalProps {
   isOpen: boolean;
@@ -26,7 +26,38 @@ export default function ItemModal({ isOpen, onClose, onSave, item, sucursales }:
   
   const [tagInput, setTagInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
+
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError("");
+    
+    const formDataObj = new FormData();
+    formDataObj.append("file", file);
+
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formDataObj,
+      });
+      
+      if (!response.ok) throw new Error("Error al subir archivo");
+      
+      const data = await response.json();
+      setFormData(prev => ({ ...prev, factura: data.url }));
+    } catch (err) {
+      setError("Error al subir el archivo PDF");
+      console.error(err);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   useEffect(() => {
     if (item) {
@@ -239,14 +270,39 @@ export default function ItemModal({ isOpen, onClose, onSave, item, sucursales }:
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--txt3)]">Factura / PDF (Link)</label>
-            <input 
-              type="text" 
-              className="w-full h-10 bg-[var(--bg3)] border border-[var(--line2)] rounded-[var(--r)] px-4 text-[13px] outline-none focus:border-[var(--accent)]"
-              placeholder="Ej: https://docs.google.com/..."
-              value={formData.factura || ""}
-              onChange={e => setFormData({...formData, factura: e.target.value})}
-            />
+            <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--txt3)]">Factura / PDF</label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input 
+                  type="text" 
+                  className="w-full h-10 bg-[var(--bg3)] border border-[var(--line2)] rounded-[var(--r)] px-4 text-[13px] outline-none focus:border-[var(--accent)]"
+                  placeholder="URL o ruta del archivo..."
+                  value={formData.factura || ""}
+                  onChange={e => setFormData({...formData, factura: e.target.value})}
+                />
+                {formData.factura?.startsWith('/uploads/') && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--green)]" title="Archivo subido">
+                    <Check size={14} />
+                  </div>
+                )}
+              </div>
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                className="hidden" 
+                accept="application/pdf,image/*"
+                onChange={handleFileUpload}
+              />
+              <button 
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="flex items-center gap-2 px-4 h-10 bg-[var(--bg4)] border border-[var(--line2)] rounded-[var(--r)] text-[var(--txt2)] text-[12px] font-bold hover:bg-[var(--as)] hover:text-[var(--accent)] transition-all disabled:opacity-50"
+              >
+                {uploading ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
+                <span>Subir</span>
+              </button>
+            </div>
           </div>
 
           <div className="space-y-1.5">

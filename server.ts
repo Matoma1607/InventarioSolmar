@@ -1,8 +1,13 @@
 import express from "express";
 import path from "node:path";
+import fs from "node:fs";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
+
+const require = createRequire(import.meta.url);
+const multer = require("multer");
 
 dotenv.config();
 
@@ -17,6 +22,49 @@ async function startServer() {
   console.log("Starting server initialization...");
 
   app.use(express.json());
+
+  // Configure multer for file uploads
+  const uploadsDir = path.join(root, "uploads");
+  if (!fs.existsSync(uploadsDir)) {
+    fs.mkdirSync(uploadsDir, { recursive: true });
+  }
+
+  const storage = multer.diskStorage({
+    destination: (req: any, file: any, cb: any) => {
+      cb(null, uploadsDir);
+    },
+    filename: (req: any, file: any, cb: any) => {
+      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+      cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+  });
+
+  const upload = multer({ 
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+  });
+
+  app.post("/api/upload", (req: any, res: any) => {
+    upload.single("file")(req, res, (err: any) => {
+      if (err) {
+        console.error("Multer error:", err);
+        return res.status(500).json({ error: "Error procesando el archivo: " + err.message });
+      }
+      
+      const multerReq = req as any;
+      if (!multerReq.file) {
+        console.error("No file in request");
+        return res.status(400).json({ error: "No se subió ningún archivo." });
+      }
+
+      const fileUrl = `/uploads/${multerReq.file.filename}`;
+      console.log(`File uploaded successfully: ${fileUrl}`);
+      res.json({ url: fileUrl });
+    });
+  });
+
+  // Serve uploads directory
+  app.use("/uploads", express.static(uploadsDir));
 
   // Health check
   app.get("/api/health", (req, res) => {
@@ -63,4 +111,3 @@ startServer().catch(err => {
   console.error("CRITICAL SERVER ERROR:", err);
   process.exit(1);
 });
-

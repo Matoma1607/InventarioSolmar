@@ -249,7 +249,11 @@ export default function App() {
       case "history":
         return <HistoryView history={history} sucursales={sucursales} />;
       case "invoices":
-        return <FacturasView items={items} onOpenEdit={(id) => { setSelectedItem(items.find(i => i.id === id) || null); setIsItemModalOpen(true); }} />;
+        return <FacturasView 
+          items={items} 
+          onOpenEdit={(id) => { setSelectedItem(items.find(i => i.id === id) || null); setIsItemModalOpen(true); }} 
+          onUpdateItem={async (id, data) => { await handleSaveItem({ ...items.find(i => i.id === id), ...data, id }); }}
+        />;
       case "reports":
         return <ReportsView items={items} units={units} history={history} sucursales={sucursales} />;
       case "scan":
