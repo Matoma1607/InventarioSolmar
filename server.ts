@@ -1,9 +1,13 @@
 import express from "express";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
+
+// Importar los plugins para usarlos directamente
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
 dotenv.config();
 
@@ -59,11 +63,19 @@ async function startServer() {
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
-    const configPath = path.resolve(__dirname, "vite.config.mts");
+    // Configuración de Vite in-line para evitar problemas con la carga de vite.config.ts en Windows/ESM
     const vite = await createViteServer({
-      configFile: pathToFileURL(configPath).href,
+      configFile: false,
+      root: process.cwd(),
+      plugins: [react(), tailwindcss()],
+      resolve: {
+        alias: {
+          "@": path.resolve(process.cwd(), "./src"),
+        },
+      },
       server: { 
         middlewareMode: true,
+        hmr: process.env.DISABLE_HMR !== "true",
       },
       appType: "spa",
     });
