@@ -52,7 +52,7 @@ export default function Sidebar({ activeView, setActiveView, itemCount, user, on
       <div className="p-6 border-b border-[var(--line)]">
         <div className="flex items-center gap-2 text-[var(--txt)] font-semibold text-[13px] tracking-tight">
           <div className="w-2 h-2 rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
-          Óptica Solmar
+          InventarioSolmar
         </div>
         <div className="text-[10px] text-[var(--txt3)] mt-1 uppercase tracking-widest pl-4">
           IT Asset Manager

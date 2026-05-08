@@ -47,7 +47,7 @@ export default function Login({ onLogin }: LoginProps) {
         <div className="flex items-center gap-3 mb-8">
           <div className="w-2.5 h-2.5 rounded-full bg-[var(--accent)] shadow-[0_0_12px_var(--accent)]" />
           <div>
-            <div className="font-bold text-[15px] text-[var(--txt)]">Óptica Solmar</div>
+            <div className="font-bold text-[15px] text-[var(--txt)]">InventarioSolmar</div>
             <div className="text-[11px] text-[var(--txt3)] uppercase tracking-widest mt-0.5">
               IT Asset Manager
             </div>

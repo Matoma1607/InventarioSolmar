@@ -15,7 +15,7 @@ export default function AIAssistant({ items, units, history }: AIAssistantProps)
   const [isMinimized, setIsMinimized] = useState(false);
   const [query, setQuery] = useState("");
   const [messages, setMessages] = useState<{ role: 'ai' | 'user', text: string }[]>([
-    { role: 'ai', text: "¡Hola! Soy tu asistente de inventario Solmar. ¿En qué puedo ayudarte hoy?" }
+    { role: 'ai', text: "¡Hola! Soy tu asistente de InventarioSolmar. ¿En qué puedo ayudarte hoy?" }
   ]);
   const [loading, setLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -73,7 +73,7 @@ export default function AIAssistant({ items, units, history }: AIAssistantProps)
                   <Sparkles size={16} />
                 </div>
                 <div>
-                  <div className="text-[13px] font-bold text-[var(--txt)] tracking-tight">Solmar AI</div>
+                  <div className="text-[13px] font-bold text-[var(--txt)] tracking-tight">Inventario AI</div>
                   <div className="text-[10px] text-[var(--green)] flex items-center gap-1">
                     <div className="w-1 h-1 rounded-full bg-current animate-pulse" /> En línea
                   </div>
