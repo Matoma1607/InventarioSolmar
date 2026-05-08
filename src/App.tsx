@@ -5,6 +5,7 @@ import { initialItems, initialUnits, initialSucursales, initialHistory, initialU
 import Inventory from "./components/Inventory";
 import HistoryView from "./components/HistoryView";
 import ReportsView from "./components/ReportsView";
+import FacturasView from "./components/FacturasView";
 import QRScannerView from "./components/QRScannerView";
 import Login from "./components/Login";
 import ItemModal from "./components/ItemModal";
@@ -247,6 +248,8 @@ export default function App() {
         );
       case "history":
         return <HistoryView history={history} sucursales={sucursales} />;
+      case "invoices":
+        return <FacturasView items={items} onOpenEdit={(id) => { setSelectedItem(items.find(i => i.id === id) || null); setIsItemModalOpen(true); }} />;
       case "reports":
         return <ReportsView items={items} units={units} history={history} sucursales={sucursales} />;
       case "scan":

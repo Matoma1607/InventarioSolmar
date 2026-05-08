@@ -10,7 +10,8 @@ import {
   Edit3, 
   Trash2, 
   CheckCircle2, 
-  AlertCircle 
+  AlertCircle,
+  FileText 
 } from "lucide-react";
 import { Item, Unit, User, UserRole } from "../types";
 
@@ -212,8 +213,14 @@ export default function Inventory({
                 <tr key={item.id} className="hover:bg-[var(--bg3)] transition-colors group">
                   <td className="px-5 py-3.5">
                     <div className="text-[13px] font-medium text-[var(--txt)]">{item.articulo}</div>
-                    <div className="text-[10px] text-[var(--txt3)] font-mono mt-0.5 tracking-tight">
+                    <div className="text-[10px] text-[var(--txt3)] font-mono mt-0.5 tracking-tight flex items-center gap-2">
                       SOL-{String(item.id).padStart(6, '0')} {item.serie && `· ${item.serie}`}
+                      {item.factura && (
+                        <span className="text-[var(--accent)] flex items-center gap-0.5" title="Tiene Factura PDF">
+                          <FileText size={10} />
+                          <span className="text-[8px] font-bold">PDF</span>
+                        </span>
+                      )}
                     </div>
                     {item.tags && item.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1.5">

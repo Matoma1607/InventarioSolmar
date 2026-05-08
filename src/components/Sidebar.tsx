@@ -10,7 +10,8 @@ import {
   Printer, 
   MapPin, 
   Users, 
-  LogOut 
+  LogOut,
+  FileText
 } from "lucide-react";
 import { User, UserRole } from "../types";
 
@@ -31,6 +32,7 @@ export default function Sidebar({ activeView, setActiveView, itemCount, user, on
     { id: 'inventory', label: 'Inventario', icon: <Grid3X3 size={18} />, badge: itemCount },
     { id: 'history', label: 'Historial', icon: <History size={18} /> },
     { id: 'reports', label: 'Reportes', icon: <PieChart size={18} /> },
+    { id: 'invoices', label: 'Facturas', icon: <FileText size={18} /> },
   ];
 
   const operationsItems = [

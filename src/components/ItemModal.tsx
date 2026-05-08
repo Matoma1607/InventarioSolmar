@@ -216,6 +216,39 @@ export default function ItemModal({ isOpen, onClose, onSave, item, sucursales }:
             </select>
           </div>
 
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-1.5">
+               <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--txt3)]">Costo ($)</label>
+               <input 
+                 type="number" 
+                 min="0"
+                 className="w-full h-10 bg-[var(--bg3)] border border-[var(--line2)] rounded-[var(--r)] px-4 text-[13px] outline-none focus:border-[var(--accent)]"
+                 value={formData.monto || ""}
+                 onChange={e => setFormData({...formData, monto: parseFloat(e.target.value) || 0})}
+               />
+             </div>
+             <div className="space-y-1.5">
+               <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--txt3)]">Fecha de Compra</label>
+               <input 
+                 type="date" 
+                 className="w-full h-10 bg-[var(--bg3)] border border-[var(--line2)] rounded-[var(--r)] px-4 text-[13px] outline-none focus:border-[var(--accent)]"
+                 value={formData.fecha_compra || ""}
+                 onChange={e => setFormData({...formData, fecha_compra: e.target.value})}
+               />
+             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--txt3)]">Factura / PDF (Link)</label>
+            <input 
+              type="text" 
+              className="w-full h-10 bg-[var(--bg3)] border border-[var(--line2)] rounded-[var(--r)] px-4 text-[13px] outline-none focus:border-[var(--accent)]"
+              placeholder="Ej: https://docs.google.com/..."
+              value={formData.factura || ""}
+              onChange={e => setFormData({...formData, factura: e.target.value})}
+            />
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--txt3)]">Observaciones</label>
             <textarea 
