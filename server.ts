@@ -20,10 +20,10 @@ async function startServer() {
   app.post("/api/assistant", async (req, res) => {
     const { query, items, units, history } = req.body;
 
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.API_KEY;
     if (!apiKey) {
       return res.status(500).json({ 
-        error: "GEMINI_API_KEY is not configured on the server." 
+        error: "No se encontró una clave de API configurada. Por favor, configura GEMINI_API_KEY o GOOGLE_API_KEY en los Secretos de AI Studio." 
       });
     }
 

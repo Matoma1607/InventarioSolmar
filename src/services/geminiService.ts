@@ -18,8 +18,8 @@ export const inventoryAssistant = async (
 
     if (!response.ok) {
       const errorData = await response.json();
-      if (errorData.error?.includes("GEMINI_API_KEY")) {
-        return "El Asistente IA no está disponible porque no se ha configurado el GEMINI_API_KEY en el servidor. Por favor, añádelo en los Secretos de AI Studio.";
+      if (errorData.error?.includes("clave de API")) {
+        return "El Asistente IA no está disponible porque no se ha configurado la clave en el servidor. Por favor, añade GEMINI_API_KEY o GOOGLE_API_KEY en los Secretos de AI Studio.";
       }
       throw new Error("Server error");
     }
