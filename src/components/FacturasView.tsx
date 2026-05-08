@@ -25,8 +25,8 @@ export default function InvoicesView({ items, onOpenEdit, onUpdateItem }: Invoic
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-        alert("El archivo es demasiado grande (máximo 2MB)");
+    if (file.size > 700 * 1024) {
+        alert("El archivo es demasiado grande (máximo 700KB para el almacenamiento directo)");
         return;
     }
 

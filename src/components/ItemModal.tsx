@@ -35,9 +35,9 @@ export default function ItemModal({ isOpen, onClose, onSave, item, sucursales }:
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Optional: limit file size for Base64 (e.g., 2MB to keep Firestore happy)
-    if (file.size > 2 * 1024 * 1024) {
-      setError("El archivo es demasiado grande (máximo 2MB para esta versión práctica)");
+    // Limit file size for Base64 (Firestore has a 1MB limit per document)
+    if (file.size > 700 * 1024) {
+      setError("El archivo es demasiado grande (máximo 700KB para almacenamiento directo)");
       return;
     }
 
@@ -276,39 +276,40 @@ export default function ItemModal({ isOpen, onClose, onSave, item, sucursales }:
           <div className="space-y-1.5">
             <label className="text-[11px] font-bold uppercase tracking-wider text-[var(--txt3)]">Factura / PDF</label>
             <div className="flex gap-2">
-              <div className="relative flex-1 flex gap-1">
+              <div className="relative flex-1">
                 <input 
                   type="text" 
-                  className="w-full h-10 bg-[var(--bg3)] border border-[var(--line2)] rounded-[var(--r)] px-4 text-[13px] outline-none focus:border-[var(--accent)]"
+                  className="w-full h-10 bg-[var(--bg3)] border border-[var(--line2)] rounded-[var(--r)] px-4 pr-8 text-[13px] outline-none focus:border-[var(--accent)]"
                   placeholder="URL o ruta del archivo..."
                   value={formData.factura || ""}
                   onChange={e => setFormData({...formData, factura: e.target.value})}
                 />
-                {formData.factura && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                        const win = window.open();
-                        if (win) {
-                            if (formData.factura?.startsWith('data:')) {
-                                win.document.write(`<iframe src="${formData.factura}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
-                            } else {
-                                win.location.href = formData.factura || '';
-                            }
-                        }
-                    }}
-                    className="h-10 px-3 bg-[var(--bg4)] border border-[var(--line2)] rounded-[var(--r)] text-[12px] hover:text-[var(--accent)] transition-all"
-                    title="Ver archivo"
-                  >
-                    Ver
-                  </button>
-                )}
                 {(formData.factura?.startsWith('/uploads/') || formData.factura?.startsWith('data:')) && (
-                  <div className="absolute right-[45px] top-1/2 -translate-y-1/2 text-[var(--green)]" title="Archivo cargado">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--green)]">
                     <Check size={14} />
                   </div>
                 )}
               </div>
+
+              {formData.factura && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const win = window.open();
+                    if (win) {
+                      if (formData.factura?.startsWith('data:')) {
+                        win.document.write(`<iframe src="${formData.factura}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                      } else {
+                        win.location.href = formData.factura || '';
+                      }
+                    }
+                  }}
+                  className="h-10 px-3 bg-[var(--bg4)] border border-[var(--line2)] rounded-[var(--r)] text-[12px] hover:text-[var(--accent)] transition-all font-medium"
+                >
+                  Ver
+                </button>
+              )}
+
               <input 
                 type="file" 
                 ref={fileInputRef}
